@@ -134,7 +134,13 @@ export const useHandleMessages = ({ ws, db, restart }: { ws: WS; db: DB; restart
           }
           break;
         case MessageType.SET_CHANGE_ROOM_GUESTS:
-          console.log(rawMessage, ws.userId);
+          const { roomUsers } = ws.getMessage(MessageType.SET_CHANGE_ROOM_GUESTS, rawMessage).data;
+          roomUsers.forEach((item) => {
+            if (item !== ws.userId) {
+              rtc?.createRTC({ id: item });
+              rtc?.invite({ targetUserId: item, userId: ws.userId });
+            }
+          });
           break;
         case MessageType.ANSWER:
           if (rtc) {

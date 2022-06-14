@@ -28,9 +28,13 @@ class RTC implements RTCInterface {
     return this.peerConnections;
   };
 
-  public handleIceCandidate: RTCInterface['handleIceCandidate'] = ({ targetUserId, userId }) => {
+  public handleIceCandidate: RTCInterface['handleIceCandidate'] = ({
+    targetUserId: target,
+    userId,
+  }) => {
     // eslint-disable-next-line @typescript-eslint/no-this-alias
     const core = this;
+    const targetUserId = target !== this.ws.userId ? target : userId;
     this.peerConnections[targetUserId].onicecandidate = function handleICECandidateEvent(
       event: RTCPeerConnectionIceEvent
     ) {
@@ -146,26 +150,28 @@ class RTC implements RTCInterface {
   public handleCandidateMessage: RTCInterface['handleCandidateMessage'] = (msg, cb) => {
     const {
       id,
-      data: { candidate },
+      data: { candidate, userId },
     } = msg;
     const cand = new RTCIceCandidate(candidate);
-    this.peerConnections[id]
-      .addIceCandidate(cand)
-      .then(() => {
-        log('info', `Adding received ICE candidate: ${JSON.stringify(cand)}`);
-        if (cb) {
-          cb(cand);
-        }
-      })
-      .catch((e) => {
-        log('error', 'Set candidate error', {
-          error: e,
-          cand,
+    if (cand.candidate) {
+      this.peerConnections[userId]
+        .addIceCandidate(cand)
+        .then(() => {
+          log('info', 'Adding received ICE candidate:', cand.usernameFragment);
+          if (cb) {
+            cb(cand);
+          }
+        })
+        .catch((e) => {
+          log('error', 'Set candidate error', {
+            error: e,
+            cand,
+          });
+          if (cb) {
+            cb(null);
+          }
         });
-        if (cb) {
-          cb(null);
-        }
-      });
+    }
   };
 
   private getRoom() {
@@ -189,7 +195,8 @@ class RTC implements RTCInterface {
       userId,
     });
     const desc = new RTCSessionDescription(sdp);
-    this.peerConnections[id]
+    console.warn(1, sdp.sdp);
+    this.peerConnections[userId]
       .setRemoteDescription(desc)
       .then(() => {
         log('info', 'Setting up the local media stream...');
@@ -199,32 +206,32 @@ class RTC implements RTCInterface {
         const localStream = stream;
         log('info', '-- Local video stream obtained');
         localStream.getTracks().forEach((track) => {
-          this.peerConnections[id].addTrack(track, localStream);
+          this.peerConnections[userId].addTrack(track, localStream);
         });
       })
       .then(() => {
         log('info', '------> Creating answer');
-        this.peerConnections[id].createAnswer().then((answ) => {
-          if (!answ || !this.peerConnections[id]) {
+        this.peerConnections[userId].createAnswer().then((answ) => {
+          if (!answ || !this.peerConnections[userId]) {
             log('error', 'Failed set local description for answer.', {
               answ,
-              peerConnection: this.peerConnections[id],
+              peerConnection: this.peerConnections[userId],
             });
             cb(null);
             return;
           }
           log('info', '------> Setting local description after creating answer');
-          this.peerConnections[id]
+          this.peerConnections[userId]
             .setLocalDescription(answ)
             .catch((err) => {
               log('error', 'Error set local description for answer', err);
             })
             .then(() => {
-              const { localDescription } = this.peerConnections[id];
+              const { localDescription } = this.peerConnections[userId];
               if (localDescription) {
                 log('info', 'Sending answer packet back to other peer');
                 this.ws.sendMessage({
-                  id,
+                  id: userId,
                   type: MessageType.ANSWER,
                   token: '',
                   data: {
@@ -247,10 +254,12 @@ class RTC implements RTCInterface {
 
   public handleVideoAnswerMsg: RTCInterface['handleVideoAnswerMsg'] = (msg, cb) => {
     const {
+      id,
       data: { sdp, userId },
     } = msg;
     log('info', 'Call recipient has accepted our call');
     const desc = new RTCSessionDescription(sdp);
+    console.warn(2, sdp.sdp);
     this.peerConnections[userId]
       .setRemoteDescription(desc)
       .then(() => {

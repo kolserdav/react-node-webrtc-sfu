@@ -37,11 +37,11 @@ class RTC implements RTCInterface {
         log('info', 'Outgoing ICE candidate:', event.candidate.usernameFragment);
         core.ws.sendMessage({
           type: MessageType.CANDIDATE,
-          id: userId,
+          id: targetUserId,
           token: '',
           data: {
             candidate: event.candidate,
-            userId: targetUserId,
+            userId,
           },
         });
       }
@@ -117,6 +117,7 @@ class RTC implements RTCInterface {
   }
   public handleCandidateMessage: RTCInterface['handleCandidateMessage'] = (msg, cb) => {
     const {
+      id,
       data: { candidate, userId },
     } = msg;
     const cand = new wrtc.RTCIceCandidate(candidate);
@@ -165,6 +166,13 @@ class RTC implements RTCInterface {
     this.peerConnections[userId]
       .setRemoteDescription(desc)
       .then(() => {
+        log('info', 'Setting up the local media stream...');
+        return wrtc.mediaDevices.getUserMedia({ video: true, audio: true });
+      })
+      .then((stream) => {
+        if (!this.streams[id]) {
+          this.streams[userId] = stream;
+        }
         log('info', '-- Local video stream obtained');
         this.streams[userId].getTracks().forEach((track) => {
           this.peerConnections[userId].addTrack(track, this.streams[userId]);
