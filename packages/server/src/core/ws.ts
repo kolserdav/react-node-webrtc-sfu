@@ -141,7 +141,7 @@ class WS implements WSInterface {
           if (!second) {
             setTimeout(() => {
               this.sendMessage(args, true);
-            }, 1000);
+            }, 2000);
           } else {
             log('warn', 'Send message without conected socket', {
               args,

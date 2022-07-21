@@ -174,7 +174,7 @@ async function evaluateRoom(evalPage, last = false) {
  */
 function getTime(startTime) {
   const delay = Math.ceil(new Date().getTime() - startTime);
-  return delay * ROOMS * USERS;
+  return delay * ROOMS * USERS + ROOMS * USERS * delay;
 }
 
 /**

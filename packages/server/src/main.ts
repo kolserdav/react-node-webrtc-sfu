@@ -203,7 +203,7 @@ function createServer({ port = PORT, cors = '' }: { port?: number; cors?: string
         roomKeys.forEach((item) => {
           const index = rtc.rooms[item].indexOf(userId);
           if (index !== -1) {
-            const keys = Object.keys(rtc.peerConnectionsServer);
+            const keys = Object.keys(rtc.peerConnections);
             rtc.cleanConnections(item, userId.toString());
             rtc.rooms[item].splice(index, 1);
             const mute = rtc.muteds[item].indexOf(userId.toString());

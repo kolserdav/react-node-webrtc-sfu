@@ -686,62 +686,58 @@ export const useVideoStarted = ({
   useEffect(() => {
     let mounted = true;
     const timeout = setInterval(() => {
-      if (timeStart) {
-        const diffs: Stream[] = [];
-        if (Object.keys(played).length === streams.length) {
-          streams.forEach((item) => {
-            const that = Object.keys(played).find(
-              (_item) => _item === item.target.toString() && !played[_item]
-            );
-            if (that) {
-              diffs.push(item);
-            }
-          });
-        } else {
-          streams.forEach((item) => {
-            const that = Object.keys(played).find((_item) => _item === item.target.toString());
-            if (!that) {
-              diffs.push(item);
-            }
-          });
-        }
-        const _attempts = { ...attempts };
-        diffs.forEach((item) => {
-          if (!_attempts[item.target]) {
-            _attempts[item.target] = 0;
-          }
-          if (_attempts[item.target] === 1) {
-            if (!played[item.target] && mounted) {
-              lostStreamHandler({ ...item, eventName: 'not-played' });
-              const str = streams.find((i) => i.target === item.target);
-              console.log(str?.stream.getTracks().length);
-            }
-          } else {
-            log('info', `${_attempts[item.target]} attempts of restart:`, { target: item.target });
-            if (_attempts[item.target] === 5) {
-              _attempts[item.target] = 0;
-              ws.sendMessage({
-                type: MessageType.SET_CHANGE_UNIT,
-                id: item.target,
-                connId: item.connId,
-                data: {
-                  target: ws.userId,
-                  roomLenght: rtc.roomLength,
-                  muteds: rtc.muteds,
-                  eventName: 'delete',
-                },
-              });
-            }
-          }
-
-          if (_attempts[item.target] !== undefined) {
-            _attempts[item.target] += 1;
-          } else {
-            _attempts[item.target] = 1;
+      const diffs: Stream[] = [];
+      if (Object.keys(played).length === streams.length) {
+        streams.forEach((item) => {
+          const that = Object.keys(played).find(
+            (_item) => _item === item.target.toString() && !played[_item]
+          );
+          if (that) {
+            diffs.push(item);
           }
         });
-        setAttempts(_attempts);
+      } else {
+        streams.forEach((item) => {
+          const that = Object.keys(played).find((_item) => _item === item.target.toString());
+          if (!that) {
+            diffs.push(item);
+          }
+        });
       }
+      const _attempts = { ...attempts };
+      diffs.forEach((item) => {
+        if (!_attempts[item.target]) {
+          _attempts[item.target] = 0;
+        }
+        if (_attempts[item.target] === 1) {
+          if (!played[item.target] && mounted) {
+            lostStreamHandler({ ...item, eventName: 'not-played' });
+          }
+        } else {
+          log('info', `${_attempts[item.target]} attempts of restart:`, { target: item.target });
+          if (_attempts[item.target] === 5) {
+            _attempts[item.target] = 0;
+            ws.sendMessage({
+              type: MessageType.SET_CHANGE_UNIT,
+              id: item.target,
+              connId: item.connId,
+              data: {
+                target: ws.userId,
+                roomLenght: rtc.roomLength,
+                muteds: rtc.muteds,
+                eventName: 'delete',
+              },
+            });
+          }
+        }
+
+        if (_attempts[item.target] !== undefined) {
+          _attempts[item.target] += 1;
+        } else {
+          _attempts[item.target] = 1;
+        }
+      });
+      setAttempts(_attempts);
     }, 1000);
     return () => {
       clearInterval(timeout);
