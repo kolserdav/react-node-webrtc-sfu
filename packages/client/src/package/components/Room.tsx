@@ -74,7 +74,6 @@ function Room({ id, iceServers, server, port }: RoomProps) {
     lostStreamHandler,
   });
   const displayMediaSupported = useMemo(() => supportDisplayMedia(), []);
-
   return (
     <div className={s.wrapper} style={theme.wrapper}>
       <div className={s.container} ref={container}>
@@ -95,6 +94,7 @@ function Room({ id, iceServers, server, port }: RoomProps) {
             />
             {/** video is strong second child */}
             <video
+              autoPlay
               muted={item.target === id || muteds.indexOf(item.target.toString()) !== -1}
               onTimeUpdate={(e) => {
                 if (item.stream.active === false) {

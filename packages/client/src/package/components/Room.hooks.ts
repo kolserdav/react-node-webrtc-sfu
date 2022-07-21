@@ -10,7 +10,6 @@
  ******************************************************************************************/
 /* eslint-disable no-case-declarations */
 import { useEffect, useState, useMemo, useCallback } from 'react';
-import { MediaStreamTrack } from 'werift';
 import WS from '../core/ws';
 import RTC from '../core/rtc';
 import { getCodec, log } from '../utils/lib';
@@ -290,9 +289,22 @@ export const useConnection = ({
     const reconnectHandler = ({
       id: _id,
       connId,
-      data: { userId },
+      data: { userId, roomId: _roomId },
     }: SendMessageArgs<MessageType.GET_NEED_RECONNECT>) => {
-      lostStreamHandler({ connId, target: userId, eventName: 'need-reconnect' });
+      let _connId = connId;
+      Object.keys(rtc.peerConnections).forEach((item) => {
+        const peer = item.split(rtc.delimiter);
+        if (peer[0] === _roomId.toString() && peer[1] === userId.toString()) {
+          // eslint-disable-next-line prefer-destructuring
+          _connId = peer[2];
+        }
+      });
+      rtc.addTracks(
+        { roomId: _roomId, target: userId, userId: _id, connId: _connId, peerId: '' },
+        () => {
+          /** */
+        }
+      );
     };
 
     // eslint-disable-next-line @typescript-eslint/no-explicit-any
@@ -320,31 +332,32 @@ export const useConnection = ({
           const _isExists = _streams.filter((_item) => item === _item.target);
           if (!_isExists[0]) {
             log('info', 'Check new user', { item, id });
-            let s1 = 1;
-            let ft: any = null;
             rtc.createPeerConnection({
               roomId,
               target: item,
               userId: id,
               connId,
               onTrack: ({ addedUserId, stream }) => {
+                const self = stream.id === rtc.selfStreamId;
+                const tracks = stream?.getTracks();
                 log('warn', 'New user send tracks', {
                   item,
                   id,
                   addedUserId,
                   sid: stream.id,
-                  self: stream.id === rtc.selfStreamId,
-                  tracks: stream?.getTracks().map((_item) => _item.kind),
+                  self,
+                  tracks: tracks?.map((_item) => _item.kind),
                 });
-                if (s1 === 3) {
-                  const _stream = stream;
-                  _stream.addTrack(ft);
-                  addStream({ target: item, stream: _stream, connId, change: false });
-                } else if (s1 === 2) {
-                  // eslint-disable-next-line prefer-destructuring
-                  ft = stream.getTracks()[0];
+                if (tracks?.length === 2 && !self) {
+                  addStream({ target: item, stream, connId, change: false });
+                } else {
+                  ws.sendMessage({
+                    type: MessageType.GET_NEED_RECONNECT,
+                    id: item,
+                    data: { userId: ws.userId, roomId },
+                    connId,
+                  });
                 }
-                s1++;
               },
               iceServers,
               eventName: 'check',
@@ -369,6 +382,11 @@ export const useConnection = ({
                 });
                 break;
             }
+          } else {
+            log('warn', 'Unhandled add tracks', {
+              peerId,
+              cs: rtc.peerConnections[peerId]?.connectionState,
+            });
           }
         } else if (!streams.find((_item) => _item.target === ws.userId)) {
           const __streams = streams.map((_item) => _item);

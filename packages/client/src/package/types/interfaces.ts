@@ -49,6 +49,7 @@ export namespace DataTypes {
     };
     export type GetNeedReconnect = {
       userId: string | number;
+      roomId: number | string;
     };
     export type GetRoomGuests = {
       roomId: number | string;

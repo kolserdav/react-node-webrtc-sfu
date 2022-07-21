@@ -161,15 +161,11 @@ class RTC implements Omit<RTCInterface, 'peerConnections' | 'createRTC'> {
         this.streams[peerId].addTrack(stream.getTracks()[0]);
         s++;
       } else {
-        const peer = peerId.split(this.delimiter);
-        const _userId = peer[1] === userId.toString() ? peer[1] : peer[2];
-        const _target = peer[2] === userId.toString() ? peer[1] : peer[2];
-        const _peerId = this.getPeerId(peer[0], _userId, _target, peer[3]);
         const tracksOpts: AddTracksProps = {
-          peerId: _peerId,
+          peerId,
           roomId: peer[0],
-          userId: _userId,
-          target: _target,
+          userId,
+          target,
           connId: peer[3],
         };
         log('info', 'Add tracks', {
@@ -453,7 +449,8 @@ class RTC implements Omit<RTCInterface, 'peerConnections' | 'createRTC'> {
     const _peerId = this.getPeerId(roomId, target, 0, _connId);
     const stream = this.streams[_peerId];
     const tracks = stream?.getTracks();
-    log('warn', 'Add tracks', {
+
+    log('info', 'Add tracks', {
       roomId,
       userId,
       target,
@@ -465,7 +462,10 @@ class RTC implements Omit<RTCInterface, 'peerConnections' | 'createRTC'> {
       id: stream?.id,
       tracks: tracks?.map((item) => item.kind),
       ss: Object.keys(this.streams),
+      p: Object.keys(this.peerConnectionsServer),
+      c: this.peerConnectionsServer[peerId]?.connectionState,
     });
+
     if (!stream) {
       log('info', 'Skiping add track', {
         roomId,
@@ -474,6 +474,7 @@ class RTC implements Omit<RTCInterface, 'peerConnections' | 'createRTC'> {
         connId,
         _peerId,
         _connId,
+        con: connId === _connId,
         k: Object.keys(this.streams),
       });
       return;
@@ -486,6 +487,7 @@ class RTC implements Omit<RTCInterface, 'peerConnections' | 'createRTC'> {
         if (sender && sender?.track?.id === track.id) {
           this.peerConnectionsServer[peerId]?.removeTrack(sender);
         }
+        console.log(peerId, stream.id, track.kind);
         this.peerConnectionsServer[peerId]!.addTrack(track, stream);
       }
     });
