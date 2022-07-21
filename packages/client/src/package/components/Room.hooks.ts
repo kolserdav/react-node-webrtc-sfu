@@ -332,6 +332,8 @@ export const useConnection = ({
           const _isExists = _streams.filter((_item) => item === _item.target);
           if (!_isExists[0]) {
             log('info', 'Check new user', { item, id });
+            let s1 = 1;
+            let fs: any;
             rtc.createPeerConnection({
               roomId,
               target: item,
@@ -348,16 +350,17 @@ export const useConnection = ({
                   self,
                   tracks: tracks?.map((_item) => _item.kind),
                 });
-                if (tracks?.length === 2 && !self) {
-                  addStream({ target: item, stream, connId, change: false });
-                } else {
-                  ws.sendMessage({
-                    type: MessageType.GET_NEED_RECONNECT,
-                    id: item,
-                    data: { userId: ws.userId, roomId },
-                    connId,
-                  });
+                if (s1 === 2) {
+                  // eslint-disable-next-line prefer-destructuring
+                  fs = stream.getTracks()[0];
                 }
+                if (s1 === 3) {
+                  const _stream = stream;
+                  _stream.addTrack(fs);
+                  alert(`${self} ${_stream?.getTracks().length}`);
+                  addStream({ target: item, stream: _stream, connId, change: true });
+                }
+                s1++;
               },
               iceServers,
               eventName: 'check',
@@ -369,7 +372,15 @@ export const useConnection = ({
                 userId: id,
                 connId,
               });
-            });
+            }); /*
+            setTimeout(() => {
+              ws.sendMessage({
+                type: MessageType.GET_NEED_RECONNECT,
+                id: item,
+                data: { userId: ws.userId, roomId },
+                connId,
+              });
+            }, 2000); */
           } else if (rtc.peerConnections[peerId]) {
             const { connectionState } = rtc.peerConnections[peerId]!;
             switch (connectionState) {
