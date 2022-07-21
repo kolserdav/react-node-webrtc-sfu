@@ -487,7 +487,6 @@ class RTC implements Omit<RTCInterface, 'peerConnections' | 'createRTC'> {
         if (sender && sender?.track?.id === track.id) {
           this.peerConnectionsServer[peerId]?.removeTrack(sender);
         }
-        console.log(peerId, stream.id, track.kind);
         this.peerConnectionsServer[peerId]!.addTrack(track, stream);
       }
     });

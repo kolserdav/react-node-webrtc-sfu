@@ -196,9 +196,7 @@ export const useConnection = ({
           }
         },
       };
-      if (/-/.test(stream.id)) {
-        return;
-      }
+      console.log(_stream.stream.getTracks());
       storeStreams.dispatch(changeStreams({ type: 'add', stream: _stream, change }));
       if (!selfStream && target === ws.userId) {
         setSelfStream(_stream);
@@ -357,7 +355,6 @@ export const useConnection = ({
                 if (s1 === 3) {
                   const _stream = stream;
                   _stream.addTrack(fs);
-                  alert(`${self} ${_stream?.getTracks().length}`);
                   addStream({ target: item, stream: _stream, connId, change: true });
                 }
                 s1++;
