@@ -159,8 +159,7 @@ class RTC implements Omit<RTCInterface, 'peerConnections' | 'createRTC'> {
           }
         }
         this.streams[peerId].addTrack(stream.getTracks()[0]);
-        s++;
-      } else {
+      } else if (s === 2) {
         const tracksOpts: AddTracksProps = {
           peerId,
           roomId: peer[0],
@@ -171,12 +170,14 @@ class RTC implements Omit<RTCInterface, 'peerConnections' | 'createRTC'> {
         log('info', 'Add tracks', {
           tracksOpts,
           s,
+          sid: stream.id,
           kinds: stream.getTracks().map((item) => item.kind),
         });
         this.addTracks(tracksOpts, () => {
           /** */
         });
       }
+      s++;
     };
   };
 
@@ -487,6 +488,7 @@ class RTC implements Omit<RTCInterface, 'peerConnections' | 'createRTC'> {
         if (sender && sender?.track?.id === track.id) {
           this.peerConnectionsServer[peerId]?.removeTrack(sender);
         }
+        console.log(track.kind, peerId, stream.getTracks().length);
         this.peerConnectionsServer[peerId]!.addTrack(track, stream);
       }
     });
