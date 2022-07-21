@@ -65,6 +65,7 @@
     "migrate": "cd packages/server && npm run migrate"
   },
   "dependencies": {
+    "@koush/wrtc": "^0.5.3",
     "@prisma/client": "^4.0.0",
     "@reduxjs/toolkit": "^1.8.2",
     "clsx": "^1.1.1",

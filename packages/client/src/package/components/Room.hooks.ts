@@ -680,64 +680,77 @@ export const useVideoStarted = ({
   const [timeStart, setTimeStart] = useState<boolean>(false);
   const [attempts, setAttempts] = useState<Record<string | number, number>>({});
 
+  useEffect(() => {
+    if (!timeStart) {
+      setTimeStart(true);
+      const _played = { ...played };
+      streams.forEach((item) => {
+        _played[item.target] = false;
+      });
+      setPlayed(_played);
+    }
+  }, [streams, timeStart, played]);
+
   /**
    * Check not played
    */
   useEffect(() => {
     let mounted = true;
     const timeout = setInterval(() => {
-      const diffs: Stream[] = [];
-      if (Object.keys(played).length === streams.length) {
-        streams.forEach((item) => {
-          const that = Object.keys(played).find(
-            (_item) => _item === item.target.toString() && !played[_item]
-          );
-          if (that) {
-            diffs.push(item);
-          }
-        });
-      } else {
-        streams.forEach((item) => {
-          const that = Object.keys(played).find((_item) => _item === item.target.toString());
-          if (!that) {
-            diffs.push(item);
-          }
-        });
-      }
-      const _attempts = { ...attempts };
-      diffs.forEach((item) => {
-        if (!_attempts[item.target]) {
-          _attempts[item.target] = 0;
-        }
-        if (_attempts[item.target] === 1) {
-          if (!played[item.target] && mounted) {
-            lostStreamHandler({ ...item, eventName: 'not-played' });
-          }
+      if (timeStart) {
+        const diffs: Stream[] = [];
+        if (Object.keys(played).length === streams.length) {
+          streams.forEach((item) => {
+            const that = Object.keys(played).find(
+              (_item) => _item === item.target.toString() && !played[_item]
+            );
+            if (that) {
+              diffs.push(item);
+            }
+          });
         } else {
-          log('info', `${_attempts[item.target]} attempts of restart:`, { target: item.target });
-          if (_attempts[item.target] === 5) {
+          streams.forEach((item) => {
+            const that = Object.keys(played).find((_item) => _item === item.target.toString());
+            if (!that) {
+              diffs.push(item);
+            }
+          });
+        }
+        const _attempts = { ...attempts };
+        diffs.forEach((item) => {
+          if (!_attempts[item.target]) {
             _attempts[item.target] = 0;
-            ws.sendMessage({
-              type: MessageType.SET_CHANGE_UNIT,
-              id: item.target,
-              connId: item.connId,
-              data: {
-                target: ws.userId,
-                roomLenght: rtc.roomLength,
-                muteds: rtc.muteds,
-                eventName: 'delete',
-              },
-            });
           }
-        }
+          if (_attempts[item.target] === 1) {
+            if (!played[item.target] && mounted) {
+              lostStreamHandler({ ...item, eventName: 'not-played' });
+            }
+          } else {
+            log('info', `${_attempts[item.target]} attempts of restart:`, { target: item.target });
+            if (_attempts[item.target] === 5) {
+              _attempts[item.target] = 0;
+              ws.sendMessage({
+                type: MessageType.SET_CHANGE_UNIT,
+                id: item.target,
+                connId: item.connId,
+                data: {
+                  target: ws.userId,
+                  roomLenght: rtc.roomLength,
+                  muteds: rtc.muteds,
+                  eventName: 'delete',
+                },
+              });
+            }
+          }
 
-        if (_attempts[item.target] !== undefined) {
-          _attempts[item.target] += 1;
-        } else {
-          _attempts[item.target] = 1;
-        }
-      });
-      setAttempts(_attempts);
+          if (_attempts[item.target] !== undefined) {
+            _attempts[item.target] += 1;
+          } else {
+            _attempts[item.target] = 1;
+          }
+        });
+        setAttempts(_attempts);
+      }
     }, 1000);
     return () => {
       clearInterval(timeout);
